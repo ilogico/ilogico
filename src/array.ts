@@ -1,6 +1,5 @@
-export type Predicate<T> = (value: T) => {} | null | undefined;
-export type Reducer<T, R> = (acc: R, value: T) => R;
-export type unknown = {} | null | undefined;
+import { Predicate, Reducer, Mapper, Routine } from "./types";
+
 
 const identity = <T>(value: T) => value;
 
@@ -24,11 +23,12 @@ export function slice<T>(start?: number, end?: number) {
     return (array: ReadonlyArray<T>) => array.slice(start, end);
 }
 
-export function create<T>(size: number, value: T) {
+export function create<T>(size: number, generator: Mapper<number, T>) {
     const array = new Array<T>(size);
     for (let i = 0; i < size; i++) {
-        array[i] = value;
+        array[i] = generator(i);
     }
+    return array;
 }
 
 export function filter<T, E extends T>(predicate: (value: T) => value is E): (array: T[]) => E[];
@@ -87,8 +87,8 @@ export function reduce<T>(reducer: Reducer<T, T>) {
     }
 }
 
-export function fold<T, R>(seed: R, reducer: Reducer<T, R>) {
-    return (array: ReadonlyArray<T>) => {
+export function fold<T, R>(reducer: Reducer<T, R>) {
+    return (seed: R) => (array: ReadonlyArray<T>) => {
         let acc = seed;
         const { length } = array;
         for (let i = 1; i < length; i++) {
@@ -99,12 +99,7 @@ export function fold<T, R>(seed: R, reducer: Reducer<T, R>) {
 }
 
 export function reverse<T>(array: ReadonlyArray<T>) {
-    const { length } = array;
-    const result = new Array<T>(length);
-    for (let i = 0; i < length; i++) {
-        result[length - i - 1] = array[i];
-    }
-    return result;
+    return array.slice().reverse();
 }
 
 
@@ -244,19 +239,55 @@ export function unzipWith3<I, A, B, C>(unzipper: (i: I) => [A, B, C]) {
 export const unzip3 = unzipWith3(identity) as <A, B, C>(is: ReadonlyArray<[A, B, C]>) => [A[], B[], C[]];
 
 export function flatMap<I, R>(mapper: (value: I) => ReadonlyArray<R>) {
-    return (array: ReadonlyArray<I>) => {
-        const result: R[] = [];
-        let size = 0;
-        const outerLength = array.length;
-        for (let i = 0; i < outerLength; i++) {
-            const inner = mapper(array[i]);
-            const innerLength = inner.length;
-            for (let j = 0; j < innerLength; j++) {
-                result[size++] = inner[j];
-            }
-        }
-        return result;
-    }
+    const m = map(mapper);
+    return (array: ReadonlyArray<I>) => ([] as R[]).concat(...m(array));
 }
 
 export const flatten = flatMap(identity) as <T>(array: ReadonlyArray<ReadonlyArray<T>>) => T[];
+
+export const takeWhile = <T>(predicate: Predicate<T>) => {
+    const getIndex = findIndex(predicate);
+    return (array: ReadonlyArray<T>) => {
+        const index = getIndex(array);
+        return index >= 0 ? array.slice(0, index) : array.slice();
+    }
+}
+
+export const takeUntil = <T>(predicate: Predicate<T>) => {
+    const getIndex = findIndex(predicate);
+    return (array: ReadonlyArray<T>) => {
+        const index = getIndex(array);
+        return index >= 0 ? array.slice(0, index + 1) : array.slice();
+    }
+}
+
+export const dropWhile = <T>(predicate: Predicate<T>) => {
+    const getIndex = findIndex(predicate);
+    return (array: ReadonlyArray<T>) => {
+        const index = getIndex(array);
+        return index >= 0 ? array.slice(index) : [];
+    }
+}
+
+export const dropUntil = <T>(predicate: Predicate<T>) => {
+    const getIndex = findIndex(predicate);
+    return (array: ReadonlyArray<T>) => {
+        const index = getIndex(array);
+        return index >= 0 ? array.slice(index + 1) : [];
+    }
+}
+
+export const partition = <T>(predicates: ReadonlyArray<Predicate<T>>) => (array: ReadonlyArray<T>) => {
+    const partitionLength = predicates.length;
+    const partitions: T[][] = create(partitionLength + 1, () => []);
+    const { length } = array;
+    for (let i = 0; i < length; i++) {
+        let j = 0;
+        const value = array[i];
+        while (j < partitionLength && !predicates[j](value)) j++;
+        partitions[j].push(value);
+    }
+    return partitions;
+}
+
+export const execAll = forEach<Routine>(routine => routine());

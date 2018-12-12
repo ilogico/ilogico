@@ -1,4 +1,4 @@
-const N = 100000;
+const N = 100000000;
 (() => {
     const append = a => b => `${a}${b}`;
     const op = append('a');
