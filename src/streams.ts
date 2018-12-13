@@ -1,6 +1,6 @@
-import * as event from "./event";
-import { Mapper, Predicate, Seed, Reducer } from "./types";
-import * as array from './array';
+import * as array from './arrays';
+import * as event from "./events";
+import { Mapper, Predicate, Reducer } from "./types";
 
 export interface Stream<T> {
     onData: event.Subscribe<T>;

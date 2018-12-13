@@ -1,6 +1,6 @@
 import { Predicate, Action, Routine, Mapper, Reducer, Seed } from './types';
-import * as array from "./array";
-import { bind, pipe } from './function';
+import * as array from "./arrays";
+import { bind, pipe } from './functions';
 
 
 export type Subscribe<T> = (subscriber: Action<T>) => Routine;

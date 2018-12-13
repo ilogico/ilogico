@@ -71,8 +71,15 @@ export function some<T>(predicate: Predicate<T>) {
 }
 
 export function every<T>(predicate: Predicate<T>) {
-    const fi = findIndex(predicate);
-    return (array: ReadonlyArray<T>) => fi(array) < 0;
+    return (array: ReadonlyArray<T>) => {
+        const { length } = array;
+        for (let i = 0; i < length; i++) {
+            if (!predicate(array[i])) {
+                return false;
+            }
+        }
+        return true;
+    };
 }
 
 export function reduce<T>(reducer: Reducer<T, T>) {
@@ -104,6 +111,8 @@ export function reverse<T>(array: ReadonlyArray<T>) {
 
 
 export const get = (index: number) => <T>(array: ReadonlyArray<T>) => array[index];
+export const first = <T>(array: ReadonlyArray<T>) => array[0];
+export const last = <T>(array: ReadonlyArray<T>) => array[array.length - 1];
 
 export function init<T>(size: number, initializer: () => T) {
     const array = new Array<T>(size);
@@ -153,6 +162,19 @@ export function scan<T, R>(seed: R, reducer: Reducer<T, R>) {
     }
 }
 
+export function distinct<T>(array: ReadonlyArray<T>) {
+    const seen = new Set<T>();
+    const result: T[] = [];
+    const { length } = array;
+    for (let i = 0; i < length; i++) {
+        const value = array[i];
+        if (!seen.has(value)) {
+            result.push(value);
+            seen.add(value);
+        }
+    }
+    return result;
+}
 export function distinctBy<T, K>(selector: (value: T) => K) {
     return (array: ReadonlyArray<T>) => {
         const seen = new Set<K>();
